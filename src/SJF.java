@@ -5,10 +5,11 @@ import java.util.List;
 
 public class SJF implements Scheduler {
 
+    // Shortest burst time first
     private static final Comparator<Process> SJF_ORDER =
-        Comparator.comparingInt((Process p) -> p.burstTime)
-                  .thenComparingInt(p -> p.arrivalTime)
-                  .thenComparingInt(p -> p.pid);
+        Comparator.comparingInt(Process::getBurstTime)
+                  .thenComparingInt(Process::getArrivalTime)
+                  .thenComparing(Process::getPid);
 
     @Override
     public String getName() {
@@ -17,18 +18,23 @@ public class SJF implements Scheduler {
 
     @Override
     public List<Process> schedule(List<Process> processes) {
+
         List<Process> jobs = new ArrayList<>();
 
-        // Create independent records for this simulation.
+        // Create independent process records
         for (Process p : processes) {
-            jobs.add(new Process(
-                p.pid, p.arrivalTime, p.burstTime, p.priority
-            ));
+            jobs.add(p.copy());
         }
 
+        if (jobs.isEmpty()) {
+            System.out.println("No processes available.");
+            return jobs;
+        }
+
+        // Sort by arrival time
         jobs.sort(
-            Comparator.comparingInt((Process p) -> p.arrivalTime)
-                      .thenComparingInt(p -> p.pid)
+            Comparator.comparingInt(Process::getArrivalTime)
+                      .thenComparing(Process::getPid)
         );
 
         MinHeap ready = new MinHeap(
@@ -44,39 +50,47 @@ public class SJF implements Scheduler {
 
         while (completed < n) {
 
-            // Only processes that have arrived become ready.
+            // Add all arrived processes to the heap
             while (next < n &&
-                   jobs.get(next).arrivalTime <= currentTime) {
+                   jobs.get(next).getArrivalTime() <= currentTime) {
+
                 ready.insert(jobs.get(next));
                 next++;
             }
 
-            // No ready job: advance time to the next arrival.
+            // CPU is idle until the next process arrives
             if (ready.isEmpty()) {
-                currentTime = jobs.get(next).arrivalTime;
+                currentTime = jobs.get(next).getArrivalTime();
                 continue;
             }
 
+            // Select the process with the shortest burst time
             Process p = ready.removeMin();
 
-            p.firstStartTime = currentTime;
-            currentTime += p.burstTime;
+            p.setFirstStartTime(currentTime);
 
-            p.remainingTime = 0;
-            p.completionTime = currentTime;
+            currentTime += p.getBurstTime();
 
-            p.turnaroundTime =
-                p.completionTime - p.arrivalTime;
+            p.setRemainingTime(0);
+            p.setCompletionTime(currentTime);
 
-            p.waitingTime =
-                p.turnaroundTime - p.burstTime;
-
-            p.responseTime =
-                p.firstStartTime - p.arrivalTime;
+            // Calculate performance metrics
+            Metrics.calculateProcessMetrics(p);
 
             executionOrder.add(p);
             completed++;
         }
+
+        // Display the execution order and performance metrics
+        System.out.println("\nScheduling Algorithm: " + getName());
+
+        System.out.print("Execution Order: ");
+        for (Process p : executionOrder) {
+            System.out.print(p.getPid() + " ");
+        }
+        System.out.println();
+
+        Metrics.displayMetrics(executionOrder);
 
         return executionOrder;
     }

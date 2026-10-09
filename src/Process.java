@@ -203,7 +203,7 @@ public class Process {
     @Override
     public String toString() {
         return String.format(
-            "PID: %d | Arrival: %d | Burst: %d | Priority: %d "
+            "PID: %s | Arrival: %d | Burst: %d | Priority: %d "
                 + "| Remaining: %d | Completion: %d "
                 + "| Waiting: %d | Turnaround: %d | Response: %d",
             pid,
