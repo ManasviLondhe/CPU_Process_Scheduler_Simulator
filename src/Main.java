@@ -130,9 +130,29 @@ public class Main {
                     break;
 
                 case 8:
-                    System.out.println(
-                        "Round Robin is not implemented yet."
-                    );
+                    if (processes.isEmpty()) {
+                        System.out.println("No processes available.");
+                        break;
+                    }
+
+                    int timeQuantum;
+                    do {
+                        System.out.print("Enter time quantum: ");
+                        while (!sc.hasNextInt()) {
+                            System.out.print(
+                                "Enter a valid positive integer: "
+                            );
+                            sc.next();
+                        }
+                        timeQuantum = sc.nextInt();
+                        if (timeQuantum <= 0) {
+                            System.out.println(
+                                "Time quantum must be greater than zero."
+                            );
+                        }
+                    } while (timeQuantum <= 0);
+
+                    new RoundRobin(timeQuantum).schedule(processes);
                     break;
 
                 case 9:
