@@ -2,10 +2,10 @@
 public class Process {
 
     // 1. Basic process information
-    private int pid;
-    private int arrivalTime;
-    private int burstTime;
-    private int priority;
+    String pid;
+    int arrivalTime;
+    int burstTime;
+    int priority;
 
     // 2. Runtime scheduling information
     private int remainingTime;
@@ -18,7 +18,7 @@ public class Process {
     private int responseTime;
 
     // Constructor
-    public Process(int pid, int arrivalTime, int burstTime, int priority) {
+    public Process(String pid, int arrivalTime, int burstTime, int priority) {
         this.pid = pid;
         this.arrivalTime = arrivalTime;
         this.burstTime = burstTime;
@@ -37,7 +37,7 @@ public class Process {
 
     // Getters: retrieve process information
 
-    public int getPid() {
+    public String getPid() {
         return pid;
     }
 
