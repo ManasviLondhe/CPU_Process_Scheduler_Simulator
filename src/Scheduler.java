@@ -1,75 +1,47 @@
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
-public class Scheduler {
+public final class Scheduler {
 
-    private List<Process> processes;
-
-    // Constructor
-    public Scheduler(List<Process> processes) {
-        this.processes = processes;
+    private Scheduler() {
     }
 
-    // Display scheduling algorithm menu
-    public void showSchedulingMenu() {
+    public static Metrics.SchedulingResult schedule(
+            int algorithm, List<Process> processes, Integer timeQuantum) {
+        switch (algorithm) {
+            case 1:
+                return FCFS.schedule(processes);
+            case 2:
+                return SJF.schedule(processes);
+            case 3:
+                return PriorityScheduler.schedule(processes);
+            case 4:
+                if (timeQuantum == null || timeQuantum <= 0) {
+                    throw new IllegalArgumentException(
+                        "Time quantum must be greater than zero."
+                    );
+                }
+                return new RoundRobin(timeQuantum).schedule(processes);
+            default:
+                throw new IllegalArgumentException(
+                    "Unknown scheduling algorithm: " + algorithm
+                );
+        }
+    }
 
-        if (processes.isEmpty()) {
-            System.out.println("No processes available. Add processes first.");
-            return;
+    public static List<Metrics.SchedulingResult> scheduleAll(
+            List<Process> processes, int timeQuantum) {
+        if (timeQuantum <= 0) {
+            throw new IllegalArgumentException(
+                "Time quantum must be greater than zero."
+            );
         }
 
-        Scanner sc = new Scanner(System.in);
-        int choice;
-
-        do {
-            System.out.println("\n===== CPU SCHEDULING ALGORITHMS =====");
-            System.out.println("1. First Come First Serve (FCFS)");
-            System.out.println("2. Shortest Job First (SJF)");
-            System.out.println("3. Priority Scheduling");
-            System.out.println("4. Round Robin");
-            System.out.println("5. Back to Main Menu");
-            System.out.print("Enter your choice: ");
-
-            choice = sc.nextInt();
-
-            switch (choice) {
-
-                case 1:
-                    System.out.println("\nRunning FCFS Scheduling...");
-                    FCFS.schedule(processes);
-                    break;
-
-                case 2:
-                    System.out.println("\nSJF Scheduling is not implemented yet.");
-                    // Later: SJF.schedule(processes);
-                    break;
-
-                case 3:
-                    System.out.println("\nPriority Scheduling is not implemented yet.");
-                    // Later: PriorityScheduler.schedule(processes);
-                    break;
-
-                case 4:
-                    System.out.print("Enter time quantum: ");
-                    int quantum = sc.nextInt();
-
-                    if (quantum <= 0) {
-                        System.out.println("Time quantum must be positive.");
-                    } else {
-                        System.out.println(
-                                "\nRound Robin Scheduling is not implemented yet.");
-                        // Later: RoundRobin.schedule(processes, quantum);
-                    }
-                    break;
-
-                case 5:
-                    System.out.println("Returning to main menu...");
-                    break;
-
-                default:
-                    System.out.println("Invalid choice. Try again.");
-            }
-
-        } while (choice != 5);
+        List<Metrics.SchedulingResult> results = new ArrayList<>(4);
+        results.add(schedule(1, processes, null));
+        results.add(schedule(2, processes, null));
+        results.add(schedule(3, processes, null));
+        results.add(schedule(4, processes, timeQuantum));
+        return results;
     }
 }

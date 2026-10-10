@@ -10,7 +10,7 @@ public class HashTable {
         private Entry next;
 
         private Entry(Process process, Entry next) {
-            this.pid = process.getPid().trim();
+            this.pid = normalizePid(process.getPid());
             this.process = process;
             this.next = next;
         }
@@ -27,15 +27,18 @@ public class HashTable {
     // Case-insensitive hash function
     private int bucketIndex(String pid) {
         return Math.floorMod(
-            pid.trim().toLowerCase(java.util.Locale.ROOT).hashCode(),
+            normalizePid(pid).hashCode(),
             buckets.length
         );
     }
 
+    private static String normalizePid(String pid) {
+        return pid.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
     // Insert a process
     public boolean insert(Process process) {
-        if (process == null || process.getPid() == null
-                || process.getPid().trim().isEmpty()) {
+        if (process == null || process.getPid().trim().isEmpty()) {
             return false;
         }
 
@@ -63,9 +66,10 @@ public class HashTable {
 
         int index = bucketIndex(pid);
         Entry current = buckets[index];
+        String normalizedPid = normalizePid(pid);
 
         while (current != null) {
-            if (current.pid.equalsIgnoreCase(pid.trim())) {
+            if (current.pid.equals(normalizedPid)) {
                 return current.process;
             }
 
@@ -84,9 +88,10 @@ public class HashTable {
         int index = bucketIndex(pid);
         Entry current = buckets[index];
         Entry previous = null;
+        String normalizedPid = normalizePid(pid);
 
         while (current != null) {
-            if (current.pid.equalsIgnoreCase(pid.trim())) {
+            if (current.pid.equals(normalizedPid)) {
                 if (previous == null) {
                     buckets[index] = current.next;
                 } else {
@@ -107,6 +112,9 @@ public class HashTable {
     // Double capacity and redistribute all entries
     private void rehash() {
         Entry[] oldBuckets = buckets;
+        if (oldBuckets.length > Integer.MAX_VALUE / 2) {
+            throw new IllegalStateException("Hash table capacity limit reached.");
+        }
         buckets = new Entry[oldBuckets.length * 2];
         size = 0;
 

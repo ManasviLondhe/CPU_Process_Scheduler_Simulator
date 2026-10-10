@@ -1,95 +1,60 @@
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class SJF {
+public final class SJF {
 
-    // Shortest burst time first
-    private static final Comparator<Process> SJF_ORDER =
+    private static final Comparator<Process> READY_ORDER =
         Comparator.comparingInt(Process::getBurstTime)
                   .thenComparingInt(Process::getArrivalTime)
                   .thenComparing(Process::getPid);
 
-    private static String getName() {
-        return "Shortest Job First";
+    private SJF() {
     }
 
-    public static List<Process> schedule(List<Process> processes) {
+    public static Metrics.SchedulingResult schedule(
+            List<Process> processes) {
+        List<Process> jobs = Metrics.copyAndValidateProcesses(processes);
+        jobs.sort(Comparator.comparingInt(Process::getArrivalTime)
+                .thenComparing(Process::getPid));
 
-        List<Process> jobs = new ArrayList<>();
-
-        // Create independent process records
-        for (Process p : processes) {
-            jobs.add(p.copy());
-        }
-
-        if (jobs.isEmpty()) {
-            System.out.println("No processes available.");
-            return jobs;
-        }
-
-        // Sort by arrival time
-        jobs.sort(
-            Comparator.comparingInt(Process::getArrivalTime)
-                      .thenComparing(Process::getPid)
-        );
-
-        MinHeap ready = new MinHeap(
-            Math.max(1, jobs.size()), SJF_ORDER
-        );
-
-        List<Process> executionOrder = new ArrayList<>();
-
-        int next = 0;
-        int completed = 0;
+        MinHeap ready = new MinHeap(Math.max(1, jobs.size()), READY_ORDER);
+        List<Process> executionOrder = new ArrayList<>(jobs.size());
+        List<Metrics.Interval> intervals = new ArrayList<>();
+        int nextArrival = 0;
         int currentTime = 0;
-        int n = jobs.size();
 
-        while (completed < n) {
-
-            // Add all arrived processes to the heap
-            while (next < n &&
-                   jobs.get(next).getArrivalTime() <= currentTime) {
-
-                ready.insert(jobs.get(next));
-                next++;
+        while (executionOrder.size() < jobs.size()) {
+            while (nextArrival < jobs.size()
+                    && jobs.get(nextArrival).getArrivalTime() <= currentTime) {
+                ready.insert(jobs.get(nextArrival++));
             }
 
-            // CPU is idle until the next process arrives
             if (ready.isEmpty()) {
-                currentTime = jobs.get(next).getArrivalTime();
+                int nextTime = jobs.get(nextArrival).getArrivalTime();
+                intervals.add(new Metrics.Interval(currentTime, nextTime, null));
+                currentTime = nextTime;
                 continue;
             }
 
-            // Select the process with the shortest burst time
-            Process p = ready.removeMin();
-
-            p.setFirstStartTime(currentTime);
-
-            currentTime += p.getBurstTime();
-
-            p.setRemainingTime(0);
-            p.setCompletionTime(currentTime);
-
-            // Calculate performance metrics
-            Metrics.calculateProcessMetrics(p);
-
-            executionOrder.add(p);
-            completed++;
+            Process process = ready.removeMin();
+            process.setFirstStartTime(currentTime);
+            int finishTime = Math.addExact(
+                    currentTime, process.getBurstTime());
+            process.setRemainingTime(0);
+            process.setCompletionTime(finishTime);
+            intervals.add(new Metrics.Interval(
+                    currentTime, finishTime, process.getPid()));
+            executionOrder.add(process);
+            currentTime = finishTime;
         }
 
-        // Display the execution order and performance metrics
-        System.out.println("\nScheduling Algorithm: " + getName());
-
-        System.out.print("Execution Order: ");
-        for (Process p : executionOrder) {
-            System.out.print(p.getPid() + " ");
-        }
-        System.out.println();
-
-        Metrics.displayMetrics(executionOrder);
-
-        return executionOrder;
+        return Metrics.createResult(
+                "Shortest Job First (non-preemptive)",
+                executionOrder,
+                intervals,
+                0,
+                currentTime
+        );
     }
 }

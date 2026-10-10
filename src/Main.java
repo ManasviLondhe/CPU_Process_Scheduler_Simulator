@@ -1,211 +1,205 @@
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
 public class Main {
 
     public static void main(String[] args) {
+        ProcessManager manager = new ProcessManager();
 
-        Scanner sc = new Scanner(System.in);
-        List<Process> processes = new ArrayList<>();
+        try (Scanner scanner = new Scanner(System.in)) {
+            boolean running = true;
+            while (running) {
+                displayMainMenu();
+                Integer choice = readInt(scanner, "Enter your choice: ");
+                if (choice == null) {
+                    break;
+                }
 
-        int choice;
-
-        do {
-            System.out.println("\n==================================");
-            System.out.println("  CPU PROCESS SCHEDULER SIMULATOR");
-            System.out.println("==================================");
-            System.out.println("1. Add Process");
-            System.out.println("2. Delete Process");
-            System.out.println("3. Search Process");
-            System.out.println("4. Display All Processes");
-            System.out.println("5. Run FCFS");
-            System.out.println("6. Run SJF");
-            System.out.println("7. Run Priority Scheduling");
-            System.out.println("8. Run Round Robin");
-            System.out.println("9. Compare All Algorithms");
-            System.out.println("10. Exit");
-            System.out.print("Enter your choice: ");
-
-            while (!sc.hasNextInt()) {
-                System.out.print("Enter a valid number: ");
-                sc.next();
-            }
-
-            choice = sc.nextInt();
-
-            switch (choice) {
-
-                case 1:
-                    System.out.print("Enter Process ID: ");
-                    String pid = sc.next();
-
-                    if (findProcess(processes, pid) != null) {
-                        System.out.println("Process ID already exists.");
-                        break;
+                try {
+                    switch (choice) {
+                        case 1:
+                            addProcess(scanner, manager);
+                            break;
+                        case 2:
+                            deleteProcess(scanner, manager);
+                            break;
+                        case 3:
+                            searchProcess(scanner, manager);
+                            break;
+                        case 4:
+                            manager.displayProcesses();
+                            break;
+                        case 5:
+                            runOneAlgorithm(scanner, manager, 1);
+                            break;
+                        case 6:
+                            runOneAlgorithm(scanner, manager, 2);
+                            break;
+                        case 7:
+                            runOneAlgorithm(scanner, manager, 3);
+                            break;
+                        case 8:
+                            runOneAlgorithm(scanner, manager, 4);
+                            break;
+                        case 9:
+                            compareAlgorithms(scanner, manager);
+                            break;
+                        case 10:
+                            running = false;
+                            System.out.println("Exiting simulator.");
+                            break;
+                        default:
+                            System.out.println("Invalid choice.");
                     }
-
-                    System.out.print("Enter Arrival Time: ");
-                    int arrival = sc.nextInt();
-
-                    System.out.print("Enter Burst Time: ");
-                    int burst = sc.nextInt();
-
-                    System.out.print("Enter Priority (smaller = higher): ");
-                    int priority = sc.nextInt();
-
-                    if (arrival < 0 || burst <= 0 || priority < 0) {
-                        System.out.println("Invalid process details.");
-                        break;
-                    }
-
-                    processes.add(
-                        new Process(pid, arrival, burst, priority)
-                    );
-
-                    System.out.println("Process added successfully.");
-                    break;
-
-                case 2:
-                    System.out.print("Enter PID to delete: ");
-                    String deleteId = sc.next();
-
-                    Process toDelete = findProcess(processes, deleteId);
-
-                    if (toDelete != null) {
-                        processes.remove(toDelete);
-                        System.out.println("Process deleted.");
-                    } else {
-                        System.out.println("Process not found.");
-                    }
-                    break;
-
-                case 3:
-                    System.out.print("Enter PID to search: ");
-                    String searchId = sc.next();
-
-                    Process found = findProcess(processes, searchId);
-
-                    if (found != null) {
-                        displayProcess(found);
-                    } else {
-                        System.out.println("Process not found.");
-                    }
-                    break;
-
-                case 4:
-                    if (processes.isEmpty()) {
-                        System.out.println("No processes available.");
-                    } else {
-                        System.out.println(
-                            "\nPID\tArrival\tBurst\tPriority"
-                        );
-
-                        for (Process p : processes) {
-                            System.out.println(
-                                p.pid + "\t" +
-                                p.arrivalTime + "\t" +
-                                p.burstTime + "\t" +
-                                p.priority
-                            );
-                        }
-                    }
-                    break;
-
-                case 5:
-                    FCFS.schedule(processes);
-                    break;
-
-                case 6:
-                    SJF.schedule(processes);
-                    break;
-
-                case 7:
-                    PriorityScheduler.schedule(processes);
-                    break;
-
-                case 8:
-                    if (processes.isEmpty()) {
-                        System.out.println("No processes available.");
-                        break;
-                    }
-
-                    int timeQuantum;
-                    do {
-                        System.out.print("Enter time quantum: ");
-                        while (!sc.hasNextInt()) {
-                            System.out.print(
-                                "Enter a valid positive integer: "
-                            );
-                            sc.next();
-                        }
-                        timeQuantum = sc.nextInt();
-                        if (timeQuantum <= 0) {
-                            System.out.println(
-                                "Time quantum must be greater than zero."
-                            );
-                        }
-                    } while (timeQuantum <= 0);
-
-                    new RoundRobin(timeQuantum).schedule(processes);
-                    break;
-
-                case 9:
-    if (processes.isEmpty()) {
-        System.out.println("No processes available.");
-        break;
-    }
-
-    System.out.println("\n===== FCFS =====");
-    FCFS.schedule(processes);
-
-    System.out.println("\n===== SJF =====");
-    SJF.schedule(processes);
-
-    System.out.println("\n===== Priority Scheduling =====");
-    PriorityScheduler.schedule(processes);
-
-    System.out.println("\n===== Round Robin =====");
-    System.out.print("Enter time quantum: ");
-
-    int quantum = sc.nextInt();
-
-    if (quantum > 0) {
-        new RoundRobin(quantum).schedule(processes);
-    } else {
-        System.out.println("Time quantum must be positive.");
-    }
-    break;
-
-                case 10:
-                    System.out.println("Exiting simulator.");
-                    break;
-
-                default:
-                    System.out.println("Invalid choice.");
-            }
-
-        } while (choice != 10);
-
-        sc.close();
-    }
-
-    static Process findProcess(List<Process> processes, String pid) {
-        for (Process p : processes) {
-            if (p.pid.equalsIgnoreCase(pid)) {
-                return p;
+                } catch (IllegalArgumentException | ArithmeticException ex) {
+                    System.out.println("Unable to complete operation: "
+                            + ex.getMessage());
+                }
             }
         }
-        return null;
     }
 
-    static void displayProcess(Process p) {
+    private static void displayMainMenu() {
+        System.out.println("\n==================================");
+        System.out.println("  CPU PROCESS SCHEDULER SIMULATOR");
+        System.out.println("==================================");
+        System.out.println("1. Add Process");
+        System.out.println("2. Delete Process");
+        System.out.println("3. Search Process");
+        System.out.println("4. Display All Processes");
+        System.out.println("5. Run FCFS");
+        System.out.println("6. Run SJF");
+        System.out.println("7. Run Priority Scheduling");
+        System.out.println("8. Run Round Robin");
+        System.out.println("9. Compare All Algorithms");
+        System.out.println("10. Exit");
+    }
+
+    private static void addProcess(Scanner scanner, ProcessManager manager) {
+        String pid = readToken(scanner, "Enter Process ID: ");
+        if (pid == null) {
+            return;
+        }
+        if (manager.searchProcess(pid) != null) {
+            System.out.println("Process ID already exists.");
+            return;
+        }
+
+        Integer arrival = readInt(scanner, "Enter Arrival Time: ");
+        if (arrival == null) {
+            return;
+        }
+        Integer burst = readInt(scanner, "Enter Burst Time: ");
+        if (burst == null) {
+            return;
+        }
+        Integer priority = readInt(
+                scanner, "Enter Priority (smaller = higher): ");
+        if (priority == null) {
+            return;
+        }
+
+        Process process = new Process(pid, arrival, burst, priority);
+        if (manager.addProcess(process)) {
+            System.out.println("Process added successfully.");
+        } else {
+            System.out.println("Process could not be added.");
+        }
+    }
+
+    private static void deleteProcess(
+            Scanner scanner, ProcessManager manager) {
+        String pid = readToken(scanner, "Enter PID to delete: ");
+        if (pid == null) {
+            return;
+        }
+        System.out.println(manager.deleteProcess(pid)
+                ? "Process deleted."
+                : "Process not found.");
+    }
+
+    private static void searchProcess(
+            Scanner scanner, ProcessManager manager) {
+        String pid = readToken(scanner, "Enter PID to search: ");
+        if (pid == null) {
+            return;
+        }
+        Process process = manager.searchProcess(pid);
+        if (process == null) {
+            System.out.println("Process not found.");
+            return;
+        }
+        displayProcess(process);
+    }
+
+    private static void runOneAlgorithm(
+            Scanner scanner, ProcessManager manager, int algorithm) {
+        if (manager.isEmpty()) {
+            System.out.println("No processes available. Add processes first.");
+            return;
+        }
+
+        Integer quantum = null;
+        if (algorithm == 4) {
+            quantum = readPositiveInt(scanner, "Enter time quantum: ");
+            if (quantum == null) {
+                return;
+            }
+        }
+        Metrics.displayResult(
+                Scheduler.schedule(algorithm, manager.getProcesses(), quantum));
+    }
+
+    private static void compareAlgorithms(
+            Scanner scanner, ProcessManager manager) {
+        if (manager.isEmpty()) {
+            System.out.println("No processes available. Add processes first.");
+            return;
+        }
+        Integer quantum = readPositiveInt(
+                scanner, "Enter time quantum for Round Robin: ");
+        if (quantum == null) {
+            return;
+        }
+        for (Metrics.SchedulingResult result
+                : Scheduler.scheduleAll(manager.getProcesses(), quantum)) {
+            Metrics.displayResult(result);
+        }
+    }
+
+    private static Integer readPositiveInt(Scanner scanner, String prompt) {
+        while (true) {
+            Integer value = readInt(scanner, prompt);
+            if (value == null || value > 0) {
+                return value;
+            }
+            System.out.println("Value must be greater than zero.");
+        }
+    }
+
+    private static Integer readInt(Scanner scanner, String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            if (!scanner.hasNext()) {
+                return null;
+            }
+            if (scanner.hasNextInt()) {
+                return scanner.nextInt();
+            }
+            System.out.println("Enter a valid integer.");
+            scanner.next();
+        }
+    }
+
+    private static String readToken(Scanner scanner, String prompt) {
+        System.out.print(prompt);
+        return scanner.hasNext() ? scanner.next() : null;
+    }
+
+    private static void displayProcess(Process process) {
         System.out.println("\nProcess Details");
-        System.out.println("PID: " + p.pid);
-        System.out.println("Arrival Time: " + p.arrivalTime);
-        System.out.println("Burst Time: " + p.burstTime);
-        System.out.println("Priority: " + p.priority);
+        System.out.println("PID: " + process.getPid());
+        System.out.println("Arrival Time: " + process.getArrivalTime());
+        System.out.println("Burst Time: " + process.getBurstTime());
+        System.out.println("Priority: " + process.getPriority());
     }
-
 }

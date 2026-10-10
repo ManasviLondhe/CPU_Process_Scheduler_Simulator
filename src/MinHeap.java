@@ -1,5 +1,6 @@
 
 import java.util.Comparator;
+import java.util.NoSuchElementException;
 
 public class MinHeap {
     private Process[] heap;
@@ -7,8 +8,15 @@ public class MinHeap {
     private final Comparator<Process> comparator;
 
     public MinHeap(int capacity, Comparator<Process> comparator) {
-        if (capacity < 1) {
-            capacity = 1;
+        if (capacity <= 0) {
+            throw new IllegalArgumentException(
+                "Heap capacity must be greater than zero."
+            );
+        }
+        if (comparator == null) {
+            throw new IllegalArgumentException(
+                "Heap comparator cannot be null."
+            );
         }
 
         heap = new Process[capacity];
@@ -26,12 +34,17 @@ public class MinHeap {
 
     public Process peek() {
         if (isEmpty()) {
-            return null;
+            throw new NoSuchElementException("Heap is empty.");
         }
         return heap[0];
     }
 
     public void insert(Process process) {
+        if (process == null) {
+            throw new IllegalArgumentException(
+                "Heap cannot contain null processes."
+            );
+        }
         ensureCapacity();
 
         heap[size] = process;
@@ -41,7 +54,7 @@ public class MinHeap {
 
     public Process removeMin() {
         if (isEmpty()) {
-            return null;
+            throw new NoSuchElementException("Heap is empty.");
         }
 
         Process minimum = heap[0];
@@ -102,6 +115,9 @@ public class MinHeap {
 
     private void ensureCapacity() {
         if (size == heap.length) {
+            if (heap.length > Integer.MAX_VALUE / 2) {
+                throw new IllegalStateException("Heap capacity limit reached.");
+            }
             Process[] newHeap = new Process[heap.length * 2];
             System.arraycopy(heap, 0, newHeap, 0, size);
             heap = newHeap;

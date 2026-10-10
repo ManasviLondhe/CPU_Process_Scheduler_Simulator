@@ -2,10 +2,10 @@
 public class Process {
 
     // Basic process information
-    String pid;
-    int arrivalTime;
-    int burstTime;
-    int priority;
+    private final String pid;
+    private int arrivalTime;
+    private int burstTime;
+    private int priority;
 
     // Runtime scheduling information
     private int remainingTime;
@@ -103,6 +103,7 @@ public class Process {
         }
 
         this.priority = priority;
+        resetSchedulingData();
     }
 
     public void setRemainingTime(int remainingTime) {
@@ -114,22 +115,21 @@ public class Process {
     }
 
     public void setCompletionTime(int completionTime) {
-        if (completionTime < arrivalTime) {
+        if (completionTime < arrivalTime
+                || firstStartTime < 0
+                || completionTime < firstStartTime) {
             throw new IllegalArgumentException("Invalid completion time.");
         }
 
         this.completionTime = completionTime;
-        calculateTurnaroundTime();
-        calculateWaitingTime();
     }
 
     public void setFirstStartTime(int firstStartTime) {
-        if (firstStartTime != -1 && firstStartTime < arrivalTime) {
+        if (firstStartTime < arrivalTime) {
             throw new IllegalArgumentException("Invalid first start time.");
         }
 
         this.firstStartTime = firstStartTime;
-        calculateResponseTime();
     }
 
     public void setWaitingTime(int waitingTime) {
@@ -156,25 +156,7 @@ public class Process {
         this.responseTime = responseTime;
     }
 
-    public void calculateTurnaroundTime() {
-        if (completionTime >= arrivalTime) {
-            turnaroundTime = completionTime - arrivalTime;
-        }
-    }
-
-    public void calculateWaitingTime() {
-        if (turnaroundTime >= burstTime) {
-            waitingTime = turnaroundTime - burstTime;
-        }
-    }
-
-    public void calculateResponseTime() {
-        if (firstStartTime >= arrivalTime) {
-            responseTime = firstStartTime - arrivalTime;
-        }
-    }
-
-    public void resetSchedulingData() {
+    public final void resetSchedulingData() {
         remainingTime = burstTime;
         completionTime = 0;
         firstStartTime = -1;
