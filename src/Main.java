@@ -118,28 +118,65 @@ public class Main {
                     break;
 
                 case 6:
-                    System.out.println(
-                        "SJF is not implemented yet."
-                    );
+                    SJF.schedule(processes);
                     break;
 
                 case 7:
-                    System.out.println(
-                        "Priority Scheduling is not implemented yet."
-                    );
+                    PriorityScheduler.schedule(processes);
                     break;
 
                 case 8:
-                    System.out.println(
-                        "Round Robin is not implemented yet."
-                    );
+                    if (processes.isEmpty()) {
+                        System.out.println("No processes available.");
+                        break;
+                    }
+
+                    int timeQuantum;
+                    do {
+                        System.out.print("Enter time quantum: ");
+                        while (!sc.hasNextInt()) {
+                            System.out.print(
+                                "Enter a valid positive integer: "
+                            );
+                            sc.next();
+                        }
+                        timeQuantum = sc.nextInt();
+                        if (timeQuantum <= 0) {
+                            System.out.println(
+                                "Time quantum must be greater than zero."
+                            );
+                        }
+                    } while (timeQuantum <= 0);
+
+                    new RoundRobin(timeQuantum).schedule(processes);
                     break;
 
                 case 9:
-                    System.out.println(
-                        "Implement this after all schedulers are ready."
-                    );
-                    break;
+    if (processes.isEmpty()) {
+        System.out.println("No processes available.");
+        break;
+    }
+
+    System.out.println("\n===== FCFS =====");
+    FCFS.schedule(processes);
+
+    System.out.println("\n===== SJF =====");
+    SJF.schedule(processes);
+
+    System.out.println("\n===== Priority Scheduling =====");
+    PriorityScheduler.schedule(processes);
+
+    System.out.println("\n===== Round Robin =====");
+    System.out.print("Enter time quantum: ");
+
+    int quantum = sc.nextInt();
+
+    if (quantum > 0) {
+        new RoundRobin(quantum).schedule(processes);
+    } else {
+        System.out.println("Time quantum must be positive.");
+    }
+    break;
 
                 case 10:
                     System.out.println("Exiting simulator.");
@@ -170,4 +207,5 @@ public class Main {
         System.out.println("Burst Time: " + p.burstTime);
         System.out.println("Priority: " + p.priority);
     }
+
 }

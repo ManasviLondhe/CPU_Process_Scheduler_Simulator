@@ -3,34 +3,41 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class PriorityScheduler implements Scheduler {
+public class PriorityScheduler{
 
+    // Lower priority number means higher priority
     private static final Comparator<Process> PRIORITY_ORDER =
-        Comparator.comparingInt((Process p) -> p.priority)
-                  .thenComparingInt(p -> p.arrivalTime)
-                  .thenComparingInt(p -> p.pid);
+        Comparator.comparingInt(Process::getPriority)
+                  .thenComparingInt(Process::getArrivalTime)
+                  .thenComparing(Process::getPid);
 
-    @Override
-    public String getName() {
+    
+    private static String getName() {
         return "Priority Scheduling";
     }
 
-    @Override
-    public List<Process> schedule(List<Process> processes) {
+    
+    public static List<Process> schedule(List<Process> processes) {
+
         List<Process> jobs = new ArrayList<>();
 
-        // Each simulation starts with fresh process records.
+        // Create independent process records
         for (Process p : processes) {
-            jobs.add(new Process(
-                p.pid, p.arrivalTime, p.burstTime, p.priority
-            ));
+            jobs.add(p.copy());
         }
 
+        if (jobs.isEmpty()) {
+            System.out.println("No processes available.");
+            return jobs;
+        }
+
+        // Sort processes by arrival time
         jobs.sort(
-            Comparator.comparingInt((Process p) -> p.arrivalTime)
-                      .thenComparingInt(p -> p.pid)
+            Comparator.comparingInt(Process::getArrivalTime)
+                      .thenComparing(Process::getPid)
         );
 
+        // Heap selects the highest-priority ready process
         MinHeap ready = new MinHeap(
             Math.max(1, jobs.size()), PRIORITY_ORDER
         );
@@ -44,38 +51,46 @@ public class PriorityScheduler implements Scheduler {
 
         while (completed < n) {
 
-            // Add every process that has arrived.
+            // Add all processes that have arrived
             while (next < n &&
-                   jobs.get(next).arrivalTime <= currentTime) {
+                   jobs.get(next).getArrivalTime() <= currentTime) {
+
                 ready.insert(jobs.get(next));
                 next++;
             }
 
+            // If no process is ready, advance to the next arrival
             if (ready.isEmpty()) {
-                currentTime = jobs.get(next).arrivalTime;
+                currentTime = jobs.get(next).getArrivalTime();
                 continue;
             }
 
+            // Select the process with the highest priority
             Process p = ready.removeMin();
 
-            p.firstStartTime = currentTime;
-            currentTime += p.burstTime;
+            p.setFirstStartTime(currentTime);
+            currentTime += p.getBurstTime();
 
-            p.remainingTime = 0;
-            p.completionTime = currentTime;
+            p.setRemainingTime(0);
+            p.setCompletionTime(currentTime);
 
-            p.turnaroundTime =
-                p.completionTime - p.arrivalTime;
-
-            p.waitingTime =
-                p.turnaroundTime - p.burstTime;
-
-            p.responseTime =
-                p.firstStartTime - p.arrivalTime;
+            // Calculate TAT, WT, and RT
+            Metrics.calculateProcessMetrics(p);
 
             executionOrder.add(p);
             completed++;
         }
+
+        // Display scheduling results
+        System.out.println("\nScheduling Algorithm: " + getName());
+
+        System.out.print("Execution Order: ");
+        for (Process p : executionOrder) {
+            System.out.print(p.getPid() + " ");
+        }
+        System.out.println();
+
+        Metrics.displayMetrics(executionOrder);
 
         return executionOrder;
     }
