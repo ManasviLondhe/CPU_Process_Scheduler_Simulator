@@ -1,8 +1,10 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public final class Metrics {
@@ -203,12 +205,21 @@ public final class Metrics {
         long totalWaiting = 0;
         long totalResponse = 0;
         long busyTime = 0;
+        Map<String, Process> processesById = new HashMap<>();
+        Map<String, Long> intervalBusyById = new HashMap<>();
         for (Process process : executionOrder) {
             if (process == null) {
                 throw new IllegalArgumentException(
                     "Execution order cannot contain null processes."
                 );
             }
+            String processId = process.getPid().toLowerCase(Locale.ROOT);
+            if (processesById.put(processId, process) != null) {
+                throw new IllegalArgumentException(
+                    "Execution order cannot contain duplicate processes."
+                );
+            }
+            intervalBusyById.put(processId, 0L);
             calculateProcessMetrics(process);
             totalTurnaround = Math.addExact(
                     totalTurnaround, process.getTurnaroundTime());
@@ -219,10 +230,6 @@ public final class Metrics {
             busyTime = Math.addExact(busyTime, process.getBurstTime());
         }
 
-        Set<String> processIds = new HashSet<>();
-        for (Process process : executionOrder) {
-            processIds.add(process.getPid().toLowerCase(Locale.ROOT));
-        }
         long intervalBusyTime = 0;
         int expectedStart = simulationStart;
         for (Interval interval : intervals) {
@@ -234,14 +241,20 @@ public final class Metrics {
             if (!interval.isIdle()) {
                 String processId = interval.getProcessId()
                         .toLowerCase(Locale.ROOT);
-                if (!processIds.contains(processId)) {
+                Process process = processesById.get(processId);
+                if (process == null
+                        || interval.getStartTime() < process.getArrivalTime()
+                        || interval.getEndTime() > process.getCompletionTime()) {
                     throw new IllegalArgumentException(
-                        "Gantt interval refers to an unknown process."
+                        "Gantt interval is outside the process execution window."
                     );
                 }
-                intervalBusyTime = Math.addExact(
-                        intervalBusyTime,
-                        (long) interval.getEndTime() - interval.getStartTime());
+                long duration = (long) interval.getEndTime()
+                        - interval.getStartTime();
+                intervalBusyTime = Math.addExact(intervalBusyTime, duration);
+                intervalBusyById.put(
+                        processId,
+                        Math.addExact(intervalBusyById.get(processId), duration));
             }
             expectedStart = interval.getEndTime();
         }
@@ -249,6 +262,14 @@ public final class Metrics {
             throw new IllegalArgumentException(
                 "Gantt intervals do not match the scheduled work and duration."
             );
+        }
+        for (Process process : executionOrder) {
+            String processId = process.getPid().toLowerCase(Locale.ROOT);
+            if (intervalBusyById.get(processId) != process.getBurstTime()) {
+                throw new IllegalArgumentException(
+                    "Gantt intervals do not match each process burst time."
+                );
+            }
         }
 
         long elapsedTime = (long) completionTime - simulationStart;
