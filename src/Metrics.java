@@ -78,8 +78,7 @@ public final class Metrics {
                 long elapsedTime,
                 double cpuUtilization) {
             this.algorithmName = algorithmName;
-            this.executionOrder = Collections.unmodifiableList(
-                    new ArrayList<>(executionOrder));
+            this.executionOrder = immutableProcessSnapshots(executionOrder);
             this.intervals = Collections.unmodifiableList(
                     new ArrayList<>(intervals));
             this.averageTurnaroundTime = averageTurnaroundTime;
@@ -95,7 +94,7 @@ public final class Metrics {
         }
 
         public List<Process> getExecutionOrder() {
-            return executionOrder;
+            return immutableProcessSnapshots(executionOrder);
         }
 
         public List<Interval> getIntervals() {
@@ -141,7 +140,7 @@ public final class Metrics {
                     "Process list cannot contain null entries."
                 );
             }
-            String processId = process.getPid().toLowerCase(Locale.ROOT);
+            String processId = normalizePid(process.getPid());
             if (!processIds.add(processId)) {
                 throw new IllegalArgumentException(
                     "Process IDs must be unique, ignoring letter case."
@@ -150,6 +149,19 @@ public final class Metrics {
             copies.add(process.copy());
         }
         return copies;
+    }
+
+    private static List<Process> immutableProcessSnapshots(
+            List<Process> processes) {
+        List<Process> snapshots = new ArrayList<>(processes.size());
+        for (Process process : processes) {
+            snapshots.add(process.snapshot());
+        }
+        return Collections.unmodifiableList(snapshots);
+    }
+
+    private static String normalizePid(String processId) {
+        return processId.trim().toLowerCase(Locale.ROOT);
     }
 
     public static void calculateProcessMetrics(Process process) {
@@ -205,20 +217,33 @@ public final class Metrics {
         long totalWaiting = 0;
         long totalResponse = 0;
         long busyTime = 0;
+        List<Process> resultOrder = new ArrayList<>(executionOrder.size());
         Map<String, Process> processesById = new HashMap<>();
         Map<String, Long> intervalBusyById = new HashMap<>();
-        for (Process process : executionOrder) {
-            if (process == null) {
+        Map<String, Integer> firstIntervalById = new HashMap<>();
+        Map<String, Integer> lastIntervalById = new HashMap<>();
+        int previousFirstStart = -1;
+        for (Process inputProcess : executionOrder) {
+            if (inputProcess == null) {
                 throw new IllegalArgumentException(
                     "Execution order cannot contain null processes."
                 );
             }
-            String processId = process.getPid().toLowerCase(Locale.ROOT);
+            Process process = inputProcess.snapshot();
+            resultOrder.add(process);
+            String processId = normalizePid(process.getPid());
             if (processesById.put(processId, process) != null) {
                 throw new IllegalArgumentException(
                     "Execution order cannot contain duplicate processes."
                 );
             }
+            if (process.getFirstStartTime() <= previousFirstStart
+                    || process.getRemainingTime() != 0) {
+                throw new IllegalArgumentException(
+                    "Execution order must follow first start, and every process must be complete."
+                );
+            }
+            previousFirstStart = process.getFirstStartTime();
             intervalBusyById.put(processId, 0L);
             calculateProcessMetrics(process);
             totalTurnaround = Math.addExact(
@@ -239,8 +264,7 @@ public final class Metrics {
                 );
             }
             if (!interval.isIdle()) {
-                String processId = interval.getProcessId()
-                        .toLowerCase(Locale.ROOT);
+                String processId = normalizePid(interval.getProcessId());
                 Process process = processesById.get(processId);
                 if (process == null
                         || interval.getStartTime() < process.getArrivalTime()
@@ -251,6 +275,10 @@ public final class Metrics {
                 }
                 long duration = (long) interval.getEndTime()
                         - interval.getStartTime();
+                if (!firstIntervalById.containsKey(processId)) {
+                    firstIntervalById.put(processId, interval.getStartTime());
+                }
+                lastIntervalById.put(processId, interval.getEndTime());
                 intervalBusyTime = Math.addExact(intervalBusyTime, duration);
                 intervalBusyById.put(
                         processId,
@@ -263,20 +291,24 @@ public final class Metrics {
                 "Gantt intervals do not match the scheduled work and duration."
             );
         }
-        for (Process process : executionOrder) {
-            String processId = process.getPid().toLowerCase(Locale.ROOT);
-            if (intervalBusyById.get(processId) != process.getBurstTime()) {
+        for (Process process : resultOrder) {
+            String processId = normalizePid(process.getPid());
+            if (intervalBusyById.get(processId) != process.getBurstTime()
+                    || !Integer.valueOf(process.getFirstStartTime()).equals(
+                            firstIntervalById.get(processId))
+                    || !Integer.valueOf(process.getCompletionTime()).equals(
+                            lastIntervalById.get(processId))) {
                 throw new IllegalArgumentException(
-                    "Gantt intervals do not match each process burst time."
+                    "Gantt intervals do not match each process schedule."
                 );
             }
         }
 
         long elapsedTime = (long) completionTime - simulationStart;
-        double utilization = executionOrder.isEmpty()
+        double utilization = resultOrder.isEmpty()
                 ? 0.0
                 : calculateCPUUtilization(busyTime, elapsedTime);
-        int count = executionOrder.size();
+        int count = resultOrder.size();
         double averageTurnaround = count == 0
                 ? 0.0 : (double) totalTurnaround / count;
         double averageWaiting = count == 0
@@ -286,7 +318,7 @@ public final class Metrics {
 
         return new SchedulingResult(
                 algorithmName,
-                executionOrder,
+                resultOrder,
                 intervals,
                 averageTurnaround,
                 averageWaiting,

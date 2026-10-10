@@ -169,6 +169,17 @@ public class Process {
         return new Process(pid, arrivalTime, burstTime, priority);
     }
 
+    Process snapshot() {
+        Process snapshot = new Process(pid, arrivalTime, burstTime, priority);
+        snapshot.remainingTime = remainingTime;
+        snapshot.completionTime = completionTime;
+        snapshot.firstStartTime = firstStartTime;
+        snapshot.waitingTime = waitingTime;
+        snapshot.turnaroundTime = turnaroundTime;
+        snapshot.responseTime = responseTime;
+        return snapshot;
+    }
+
     @Override
     public String toString() {
         return String.format(
