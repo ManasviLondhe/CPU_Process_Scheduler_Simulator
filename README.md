@@ -47,7 +47,27 @@ CPU Utilization = Busy Time / Elapsed Time * 100
 ```
 
 SJF and Priority Scheduling are non-preemptive. Round Robin is preemptive and
-records every time slice in its Gantt chart.
+records every time slice in its Gantt chart. Equal-arrival FCFS and Round Robin
+processes retain their input order. SJF selects the ready process with the
+shortest burst, then earliest arrival, then lexicographically smallest PID.
+Priority Scheduling selects the ready process with the lowest priority number,
+then earliest arrival, then lexicographically smallest PID.
+
+CPU utilization uses elapsed time from time zero through the final completion
+time, so any initial idle time before the first arrival is included.
+
+## Data structures and complexity
+
+- `ProcessManager` stores processes in insertion order and uses `HashTable` as
+  its PID index. PID lookup is expected O(1), worst-case O(n); listing is O(n).
+- `HashTable` uses separate chaining and resizes to keep its load factor
+  controlled.
+- `MinHeap` provides O(log n) insertion and removal and is used by SJF and
+  Priority Scheduling. Their sorting and execution each run in O(n log n).
+- `CircularQueue` provides O(1) enqueue/dequeue and is used by Round Robin.
+  With arrival sorting, Round Robin runs in O(n log n + s), where s is the
+  number of time slices.
+- FCFS sorts by arrival time and then schedules in O(n log n).
 
 ## Run the checks
 
